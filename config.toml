@@ -1,0 +1,13 @@
+baseurl = "http://tonyalaribe.github.io"
+languageCode = "en-us"
+title = "Anthony Alaribe"
+disqusShortname = "anthonyalaribe"
+copyright = "This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License."
+
+[author]
+    name = "Anthony Alaribe"
+
+[taxonomies]
+    tag = "tags"
+    category = "categories"
+    series = "series"

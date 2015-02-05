@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="">
+  <head>
+    {{ $baseurl := .Site.BaseUrl }}
+    <base href="{{$baseurl}}">
+      <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="{{.Summary}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Site.Title}} :: {{.Title}}</title>
+    <link rel="canonical" href="{{.Permalink}}">
+    <link rel="{{.RSSlink}}" rel="alternate" type="application/rss+xml"
+                                             title="{{.Site.Title}}">
+    <!-- Add to homescreen -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Fallback to homescreen for Chrome <39 on Android -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Web Starter Kit">
+    <link rel="icon" sizes="192x192" href="images/touch/chrome-touch-icon-192x192.png">
+
+    <!-- Add to homescreen for Safari on iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Web Starter Kit">
+    <link rel="apple-touch-icon" href="images/touch/apple-touch-icon.png">
+
+    <!-- Tile icon for Win8 (144x144 + tile color) -->
+    <meta name="msapplication-TileImage" content="images/touch/ms-touch-icon-144x144-precomposed.png">
+    <meta name="msapplication-TileColor" content="#3372DF">
+
+    <meta name="theme-color" content="#3372DF">
+
+    <!-- SEO: If your mobile URL is different from the desktop URL, add a canonical link to the desktop page https://developers.google.com/webmasters/smartphone-sites/feature-phones -->
+    <!--
+    <link rel="canonical" href="http://www.example.com/">
+    -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <!-- Page styles -->
+    <link rel="stylesheet" href="/styles/main.css">
+  </head>
+  <body >
+
+
+    <main class="single-post">
+      <h2 class="xxlarge underlined single-heading "> <a href="{{$baseurl}}"
+              class="linkcolor"><i class="fa fa-home"   style=""></i></a>
+          {{ .Title }}
+      <div style="clear:both"></div></h2>
+      <div style="clear:both"></div>
+      <br/>
+      <article class="">
+        
+        
+        <div class=" g-wide--1 g-medium--half">
+            <br/>
+        <div class="sidebar ">
+          <time class="blog-date">
+              {{ .Date.Format "Mon Jan 2, 2006"}}
+          </time>
+          <hr/> 
+          
+          <div class="article-tags">
+            {{ range .Params.tags }} 
+            <a style="text-decoration:none" href="{{$baseurl}}/tags/{{ . | urlize }}" >{{.}}</a>
+          {{end}}
+          </div>
+          
+          <br/>
+          <div class="share"><span class="large">Share via:</span><br/>
+          
+              <a  href="https://www.facebook.com/dialog/share?
+                    app_id=806601066044153
+                      &display=popup
+                      &href={{.Permalink}}
+                      &redirect_uri={{.Permalink}}" class="facebook"><i class="fa fa-2x
+                      fa-facebook-square"></i></a>
+
+              <a
+                                     href="http://twitter.com/share?url={{.Permalink}}&text={{.Title}}" class="twitter"><i class="fa fa-2x fa-twitter"></i></a>
+
+              <a href="https://plus.google.com/share?url={{.Permalink}}&hl=en" class="gplus"><i class="fa fa-2x fa-google-plus"></i></a>
+
+
+
+          </div>
+            </div>
+        </div>
+         
+        <div class="article-content g-wide--3 g-wide--last g-medium--half g-last">
+        
+            {{ .Content }} 
+            <br/>
+            {{ if .Params.series }}
+            {{ $name := index .Params.series 0 }}
+            <hr/>
+            <div><a href="" id="series"></a>This is a post in the <b>{{$name}}</b> series.<br/>
+                Other posts in this series:</div>
+
+            {{ $name := $name | urlize }}
+            {{ $series := index .Site.Taxonomies.series  $name }}
+            <ul class="series">
+               {{ range $series.Pages }}
+                  <li>{{.Date.Format "Jan 02, 2006"}} -  <a href="{{.Permalink}}">{{.LinkTitle}}</a></li>
+                {{end}}
+             </ul>
+            {{end}} 
+            <br/>
+          <div class="">
+            <section class="styleguide__article-nav">
+              <div class="container-medium">
+                <nav class="article-nav">
+
+                {{ if .Prev }}
+                <a href="{{.Prev.Permalink}}" class="article-nav-link article-nav-link--prev">
+                    <p class="article-nav-count">Prev</p>
+                    <p>{{.Prev.Title}}</p>
+                  </a>
+                {{end}}
+                {{ if .Next }}
+                <a href="{{.Next.Permalink}}" class="article-nav-link article-nav-link--next">
+                    <p class="article-nav-count">Next</p>
+                    <p>{{.Next.Title}}</p>
+                  </a>
+                {{end}}
+                </nav>
+              </div>
+            </section>
+          </div>
+          <br/>
+          {{template "_internal/disqus.html" . }}
+          
+        </div>
+        
+        
+        
+      </article>
+    </main>
+
+    <div style="clear:both;"></div>
+    <br/>
+   
+    {{ partial "footer.html"}}
+    <!-- Built with love using Web Starter Kit -->
+  </body>
+</html>
