@@ -1,7 +1,7 @@
 +++
 date = "2015-02-05T15:21:12Z"
 draft = false
-title = "A Journey Turns Unexpected: Abia State, Nigeria"
+title = "A Journey Turns Unexpected: Abia State"
 series = ["A Journey Turns Unexpected"]
 tags = ["Travel", "Nigeria"]
 +++
