@@ -5,10 +5,10 @@
     <base href="http://tonyalaribe.github.io">
       <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="2014 was supposed to be a really awesome and successful year. In january, I made my first pay check, with which i celebrated my birthday (pool party &#43; pizza after party). Outside my birthday party, which I wasn&rsquo;t even in the flow with, 2014 was dry. I started depressed, probably a manifestation of lots of things; My emotional state with a certain girl, being stressed out by my job at pacific ( I was still working monday to Fridays), my &ldquo;get rich quick&rdquo; scheme, which involved me designing a wordpress theme for the wordpress theme market (Themeforest); and designing stock images for &ldquo;Graphic River&rdquo;.">
+    <meta name="description" content="So, I joined the line of backend developers who have tried out golang. To learn web development in golang, I set out to develop kaku.com.ng in golang. Along the way, I learnt: * To implement facebook authentication in golang * To do file storage on AWS from golang * To host a golang web app on heroku * To implement an autocompletion backend that returns JSON * To implement random naming of files to be uploaded * To use mongo db via the mgo * To implement pagination with a mongo db backend * To manage sessions in golang Over the course of this series, I&rsquo;d be sharing how i achieved all these.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Anthony Alaribe :: A recap of 2014: An Essay</title>
-    <link rel="canonical" href="http://tonyalaribe.github.io/post/recap-2014/">
+    <title>Anthony Alaribe :: Complete Golang Web app: Introduction</title>
+    <link rel="canonical" href="http://tonyalaribe.github.io/post/golang-webapp-1/">
     <link rel="" rel="alternate" type="application/rss+xml"
                                              title="Anthony Alaribe">
     
@@ -43,7 +43,7 @@
     <main class="single-post">
       <h2 class="xxlarge underlined single-heading "> <a href="http://tonyalaribe.github.io"
               class="linkcolor"><i class="fa fa-home"   style=""></i></a>
-          A recap of 2014: An Essay
+          Complete Golang Web app: Introduction
       <div style="clear:both"></div></h2>
       <div style="clear:both"></div>
       <br/>
@@ -54,17 +54,15 @@
             <br/>
         <div class="sidebar ">
           <time class="blog-date">
-              Fri Feb 6, 2015
+              Sat Feb 14, 2015
           </time>
           <hr/> 
           
           <div class="article-tags">
              
-            <a style="text-decoration:none" href="http://tonyalaribe.github.io/tags/life" >life</a>
+            <a style="text-decoration:none" href="http://tonyalaribe.github.io/tags/golang" >golang</a>
            
-            <a style="text-decoration:none" href="http://tonyalaribe.github.io/tags/personal" >personal</a>
-           
-            <a style="text-decoration:none" href="http://tonyalaribe.github.io/tags/2014" >2014</a>
+            <a style="text-decoration:none" href="http://tonyalaribe.github.io/tags/web-development" >web development</a>
           
           </div>
           
@@ -74,14 +72,14 @@
               <a  href="https://www.facebook.com/dialog/share?
                     app_id=806601066044153
                       &display=popup
-                      &href=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014%2f
-                      &redirect_uri=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014%2f" class="facebook"><i class="fa fa-2x
+                      &href=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fgolang-webapp-1%2f
+                      &redirect_uri=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fgolang-webapp-1%2f" class="facebook"><i class="fa fa-2x
                       fa-facebook-square"></i></a>
 
               <a
-                                     href="http://twitter.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014%2f&text=A%20recap%20of%202014%3a%20An%20Essay" class="twitter"><i class="fa fa-2x fa-twitter"></i></a>
+                                     href="http://twitter.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fgolang-webapp-1%2f&text=Complete%20Golang%20Web%20app%3a%20Introduction" class="twitter"><i class="fa fa-2x fa-twitter"></i></a>
 
-              <a href="https://plus.google.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014%2f&hl=en" class="gplus"><i class="fa fa-2x fa-google-plus"></i></a>
+              <a href="https://plus.google.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fgolang-webapp-1%2f&hl=en" class="gplus"><i class="fa fa-2x fa-google-plus"></i></a>
 
 
 
@@ -91,58 +89,61 @@
          
         <div class="article-content g-wide--3 g-wide--last g-medium--half g-last">
         
-            <p>2014 was supposed to be a really awesome and successful year. In january, I made my first pay check, with which i celebrated my birthday (pool party + pizza after party). Outside my birthday party, which I wasn&rsquo;t even in the flow with, 2014 was dry.</p>
+            <p>So, I joined the line of backend developers who have tried out golang. To learn
+web development in golang, I set out to develop
+<a href="http://kaku-go.herokuapp.com">kaku.com.ng</a> in golang. Along the way, I learnt:
+* To implement facebook authentication in golang
+* To do file storage on AWS from golang
+* To host a golang web app on heroku
+* To implement an autocompletion backend that returns JSON
+* To implement random naming of files to be uploaded
+* To use mongo db via the <a href="https://labix.org/mgo">mgo</a>
+* To implement pagination with a mongo db backend
+* To manage sessions in golang</p>
 
-<p>I started depressed, probably a manifestation of lots of things; My emotional
-state with a certain girl, being stressed out by my job at pacific ( I was still
-working monday to Fridays), my &ldquo;get rich quick&rdquo; scheme, which involved me
-designing a wordpress theme for the wordpress theme market (Themeforest); and
-designing stock images for &ldquo;Graphic River&rdquo;. I never sold any of these items,
-even after working countless hours on them.</p>
+<p>Over the course of this series, I&rsquo;d be sharing how i achieved all these. If you
+feel the methods I used could be improved on, please feel free to share your
+solutions in the comments.</p>
 
-<p>I made my worst result ever in 2014. The reason; A function of depression and my
-job at Pacific. I used the pacific job as a getaway from the world. I had enough
-money to not overly worry about money, and it took so much from me that I built
-enough stress levels to not worry about my problems (real problems).</p>
+<p>Before I start, I&rsquo;d give a background on the web app; kaku.com is a place and
+events discovery service. Any user can sign in using their facebook accounts and
+add a place. Other users can search for places using three search boxed. Users
+view these places and post reviews.</p>
 
-<p>During this period at pacific, I achieved &ldquo;nothing&rdquo;, learned no new programming
-languages, built no interests in any course I took in school; Although I seemed
-to make lots of new acquaintances, it drew me away from relationships I had
-already built (My friends in school, etc).</p>
+<p>On the backend, I made use of no web framework; No martini, No gin, No Revel. I
+didnt even use any routing library. Turns out that net/http is more than
+capable, with a little extra effort. Coming from a python django background, it
+felt like relearning how the web works; Requests and Responses.</p>
 
-<p>I left with my first &ldquo;F&rdquo;, which I shall pay for in 2015.</p>
+<p>For Golang, I&rsquo;ve ended up with a mindset that most external dependencies add
+thousands of lines to your codebase, and that is equivalent to extra effort
+maintaining and keeping track of, for features that you could have easily
+achieved with a little effort and a few extra lines of code. For example,
+routing; A little bit of string manipulation and regular expressions could save
+you huge dependencies.</p>
 
-<p>I quit my job at pacific, just before the Enactus National Competition in July.
-I travelled to lagos, only to get news about how horrible my results were. This
-had the effect of making me emotionless and non-chalant towards school.</p>
+<p>My entire codebase is available at
+<a href="http://github.com/tonyalaribe/kaku-go">github/tonyalaribe/kaku-go</a> for the
+golang backend and templates, but if you like how the frontend looks and want to
+see what&rsquo;s happening behind the scenes, the HTML, SASS and Javascript files are
+available at <a href="http://github.com/tonyalaribe/kaku">github.com/tonyalaribe/kaku</a>.
+Running bower install and npm install should install all the gulp files,
+converting it into the complete dev environment.</p>
 
-<p>Even without the pacific job, my bad grades extended into the next semester, but
-atleast I didn&rsquo;t get another &ldquo;F&rdquo;. I got something worse &ldquo;No A&rdquo;, but I got back a
-bit of my lost self esteem.</p>
-
-<p>Right now I&rsquo;m trying to find the balance between Programming and Medical
-Laboratory Science (My major), which I would prefer not to have a career in.</p>
-
-<p>Just before the end of the year, I started getting stronger desires to have an
-actual second degree in Computer Science or  preferably Artificial Intelligence,
-as a way of learning those vital concepts which could guide my research, as
-well as a chance to get the &ldquo;1st class&rdquo;, and &ldquo;Peace of Mind&rdquo;. I spent 2014 being
-broke most of the time.</p>
+<p>Feel free to clone the repositories and hack till your hearts content.</p>
  
             <br/>
             
             
             <hr/>
-            <div><a href="" id="series"></a>This is a post in the <b>A recap of 2014</b> series.<br/>
+            <div><a href="" id="series"></a>This is a post in the <b>Complete Golang Web App</b> series.<br/>
                 Other posts in this series:</div>
 
             
             
             <ul class="series">
                
-                  <li>Feb 06, 2015 -  <a href="http://tonyalaribe.github.io/post/recap-2014-projects/">A recap of 2014: Projects and Achievements</a></li>
-                
-                  <li>Feb 06, 2015 -  <a href="http://tonyalaribe.github.io/post/recap-2014/">A recap of 2014: An Essay</a></li>
+                  <li>Feb 14, 2015 -  <a href="http://tonyalaribe.github.io/post/golang-webapp-1/">Complete Golang Web app: Introduction</a></li>
                 
              </ul>
              
@@ -153,15 +154,10 @@ broke most of the time.</p>
                 <nav class="article-nav">
 
                 
-                <a href="http://tonyalaribe.github.io/post/recap-2014-projects/" class="article-nav-link article-nav-link--prev">
-                    <p class="article-nav-count">Prev</p>
-                    <p>A recap of 2014: Projects and Achievements</p>
-                  </a>
                 
-                
-                <a href="http://tonyalaribe.github.io/post/aba2/" class="article-nav-link article-nav-link--next">
+                <a href="http://tonyalaribe.github.io/post/recap-2014-projects/" class="article-nav-link article-nav-link--next">
                     <p class="article-nav-count">Next</p>
-                    <p>A Journey Turns Unexpected: Abia State</p>
+                    <p>A recap of 2014: Projects and Achievements</p>
                   </a>
                 
                 </nav>
@@ -172,9 +168,9 @@ broke most of the time.</p>
           <div id="disqus_thread"></div>
 <script type="text/javascript">
     var disqus_shortname = 'anthonyalaribe';
-    var disqus_identifier = 'http:\/\/tonyalaribe.github.io\/post\/recap-2014\/';
-    var disqus_title = 'A recap of 2014: An Essay';
-    var disqus_url = 'http:\/\/tonyalaribe.github.io\/post\/recap-2014\/';
+    var disqus_identifier = 'http:\/\/tonyalaribe.github.io\/post\/golang-webapp-1\/';
+    var disqus_title = 'Complete Golang Web app: Introduction';
+    var disqus_url = 'http:\/\/tonyalaribe.github.io\/post\/golang-webapp-1\/';
 
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
