@@ -20,14 +20,14 @@
       <description>&lt;p&gt;So, I joined the line of backend developers who have tried out golang. To learn
 web development in golang, I set out to develop
 &lt;a href=&#34;http://kaku-go.herokuapp.com&#34;&gt;kaku.com.ng&lt;/a&gt; in golang. Along the way, I learnt:
-* To implement facebook authentication in golang
-* To do file storage on AWS from golang
-* To host a golang web app on heroku
-* To implement an autocompletion backend that returns JSON
-* To implement random naming of files to be uploaded
-* To use mongo db via the &lt;a href=&#34;https://labix.org/mgo&#34;&gt;mgo&lt;/a&gt;
-* To implement pagination with a mongo db backend
-* To manage sessions in golang&lt;/p&gt;
+- To implement facebook authentication in golang
+- To do file storage on AWS from golang
+- To host a golang web app on heroku
+- To implement an autocompletion backend that returns JSON
+- To implement random naming of files to be uploaded
+- To use mongo db via the &lt;a href=&#34;https://labix.org/mgo&#34;&gt;mgo&lt;/a&gt;
+- To implement pagination with a mongo db backend
+- To manage sessions in golang&lt;/p&gt;
 
 &lt;p&gt;Over the course of this series, I&amp;rsquo;d be sharing how i achieved all these. If you
 feel the methods I used could be improved on, please feel free to share your
