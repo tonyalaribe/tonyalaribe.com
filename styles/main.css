@@ -15,6 +15,10 @@ a:hover {
   color:#021d15;
 }
 
+pre{
+  overflow:scroll;
+}
+
 
 html,
 body {

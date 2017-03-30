@@ -7,8 +7,260 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.</copyright>
-    <lastBuildDate>Fri, 06 Feb 2015 22:15:20 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 30 Mar 2017 18:16:34 +0100</lastBuildDate>
     <atom:link href="http://tonyalaribe.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>How to use bleve search with a mongo db database in golang</title>
+      <link>http://tonyalaribe.github.io/post/index_a_mongo_db_site_with_bleve_in_golang/</link>
+      <pubDate>Thu, 30 Mar 2017 18:16:34 +0100</pubDate>
+      
+      <guid>http://tonyalaribe.github.io/post/index_a_mongo_db_site_with_bleve_in_golang/</guid>
+      <description>
+
+&lt;p&gt;No matter how long you&amp;rsquo;ve been using mongo db, at some point, you will become dissatisfied with its data indexing abilities. Almost every dynamic site needs some form of search thee days, but while the built in full text search that comes with mongo db can take you a long way, its just not smart enough for many use cases, like fuzzy searching (miss spelt words and incomplete words), etc.&lt;/p&gt;
+
+&lt;p&gt;In this tutorial, I will walk you through how I used &lt;a href=&#34;http://www.blevesearch.com/&#34;&gt;bleve&lt;/a&gt; to improve the search quality of my already existing golang and mongo db web application (&lt;a href=&#34;https://calabarpages.com&#34;&gt;https://calabarpages.com&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;The first thing, ofcourse, is to get the bleve package.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;  go get github.com/blevesearch/bleve
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;For this tutorial, we will use the default bleve backend engine, which relies on bolt db. So, first we will open a bleve index or create an index if non exists. I always make sure to keep just one index instance open, then share that instance all accross the entire app. This is important because the bolt db engine only allows single process access. ie two processes cant read from the same database file at a time (The database is a  physical file). Opening and closing the database/index for each request can result in a lot of load, and errors, since each request would have to wait for every other process using the database to complete.&lt;/p&gt;
+
+&lt;p&gt;To share resources across my entire server, I create a config package which holds the shared resources. I use a separate package so the resources can be accessed everywhere, even by other packages within the application.&lt;/p&gt;
+
+&lt;p&gt;./config/config.go&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;  &lt;span style=&#34;color: #f92672&#34;&gt;package&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;
+
+  &lt;span style=&#34;color: #f92672&#34;&gt;import&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;
+    &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;log&amp;quot;&lt;/span&gt;
+    &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;os&amp;quot;&lt;/span&gt;
+
+    &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;github.com/blevesearch/bleve&amp;quot;&lt;/span&gt;
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+  &lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Conf&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;MongoDB&lt;/span&gt;     &lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;MongoServer&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;    &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;mgo&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt; &lt;span style=&#34;color: #75715e&#34;&gt;//I also share a mongo db connection accross the app&lt;/span&gt;
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveFile&lt;/span&gt;   &lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveIndex&lt;/span&gt;  &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Index&lt;/span&gt;
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Conf&lt;/span&gt; &lt;span style=&#34;color: #75715e&#34;&gt;//To hold the shared resources in memory&lt;/span&gt;
+
+
+  &lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;CreateBleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Index&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #75715e&#34;&gt;/*--------  Content ---*/&lt;/span&gt;
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+
+
+  &lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Init&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;MONGOSERVER&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;os&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Getenv&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;MONGO_URL&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;session&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;mgo&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Dial&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;MONGOSERVER&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Conf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;MongoDB&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt;     &lt;span style=&#34;color: #a6e22e&#34;&gt;MONGODB&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;MongoServer&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;MONGOSERVER&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt;    &lt;span style=&#34;color: #a6e22e&#34;&gt;session&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;DB&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;MONGODB&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;),&lt;/span&gt;
+  	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveFile&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;os&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Getenv&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;BLEVE_PATH&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleveFile&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;&amp;quot;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;Blevefile not set, resulting to default address&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveFile&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;./yellowpages.bleve&amp;quot;&lt;/span&gt;
+  	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveFile&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleveFile&lt;/span&gt;
+
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Open&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveFile&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;create bleve index&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+  		&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;CreateBleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+  	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+  	&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveIndex&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt;
+
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #75715e&#34;&gt;/*Get serves as a way to allow anyone access the single instance of the config information*/&lt;/span&gt;
+  &lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Get&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Conf&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+  	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Note the Init function (not init). This function can be called anywhere, but once. When called, it actually creates the config instance that can be shared across the entire application and accessed with package.Get().&lt;/p&gt;
+
+&lt;p&gt;The init function gets the path to the bleve index file, and if it doesn&amp;rsquo;t exist, it creates a new index file.&lt;/p&gt;
+
+&lt;p&gt;Now for the interesting part:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;CreateBleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Index&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;mapping&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewIndexMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;listingsMapping&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewDocumentMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;companynameFieldMapping&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewTextFieldMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;listingsMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;AddFieldMappingsAt&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;companyname&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;companynameFieldMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;mapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;AddDocumentMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;listing&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;listingsMapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;bIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;New&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveFile&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;mapping&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;A bleve index consists of a mapping, which you instruct on how to understand your data.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;mapping := bleve.NewIndexMapping()&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Then you instruct the mapping about the data you will pass into it.  We will be passing in structs of business listings so we create a document mapping to hold the business listing.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;listingsMapping := bleve.NewDocumentMapping()&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Next we describe the most important fields within the listing to improve the indexing. For this, we&amp;rsquo;ll describe just the company name field of the struct, but we could also describe the about field, specialisation, etc.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;companynameFieldMapping := bleve.NewTextFieldMapping()&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;We let bleve know that companynameFieldMapping is a mapping under the listing document&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;listingsMapping.AddFieldMappingsAt(&amp;quot;companyname&amp;quot;, companynameFieldMapping)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;In turn, we let bleve know that the listingsMapping is for a document directly under the index.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;mapping.AddDocumentMapping(&amp;quot;listing&amp;quot;, listingsMapping)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Finally, we create and return the index&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;bIndex, err := bleve.New(config.BleveFile, mapping)
+if err != nil {
+  log.Println(err)
+  return bIndex, err
+}&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Now we have an index created, we have to add items to the index.&lt;/p&gt;
+
+&lt;h1 id=&#34;indexing-every-document-in-a-mongo-db-collection&#34;&gt;Indexing every document in a mongo db collection&lt;/h1&gt;
+
+&lt;p&gt;If you already had an existing database, you would need to loop through the entire collection and index the data.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;IndexMongoDBListingsCollectionWithBleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;conf&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Get&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;conf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Session&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Copy&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;collection&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;conf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;C&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;LISTINGSCOLLECTION&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;With&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Get&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveIndex&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;collection&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Find&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bson&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;M&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{})&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;count&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Count&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;cycles&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;count&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;100&lt;/span&gt;
+  &lt;span style=&#34;color: #75715e&#34;&gt;//To prevent using too much memory, we will draw 100 documents from the collection at a time&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;cycles&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;++&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;listings&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Listing&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{}&lt;/span&gt;
+
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Limit&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #ae81ff&#34;&gt;100&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Skip&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;100&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;All&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;listings&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+			&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+		&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;_&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;listing&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;range&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;listings&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+			&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Index&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;listing&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Slug&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;listing&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+			&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+				&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+				&lt;span style=&#34;color: #75715e&#34;&gt;//return err&lt;/span&gt;
+			&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+			&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Printf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;indexed %s successfully&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;listing&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Slug&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+		&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The most important part of this code is
+&lt;code&gt;err = bleveIndex.Index(listing.Slug, listing)&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;Which indexes a listing, with its slug as the key.&lt;/p&gt;
+
+&lt;p&gt;To search, we simply get a list of slugs (the key) that match the search, and get the corresponding documents from mongo.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;SearchWithIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;queryString&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;SearchResult&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;query&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewFuzzyQuery&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;queryString&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Fuzziness&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;2&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;search&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleve&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewSearchRequest&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Get&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;().&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;BleveIndex&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;searchResults&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bleveIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Search&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;search&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;searchResults&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;searchResults&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;With SearchWithIndex() we perform a fuzzy search. This simply means that even queries that dont have exact matches will return results that are closest to the query.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Listing&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Search&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Conf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;query&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Listings&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;Results&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Listings&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Session&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Copy&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;defer&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;collection&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;config&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Database&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;C&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;Listings&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;).&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;With&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;mgoSession&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;searchResult&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;SearchWithIndex&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;query&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;log&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Println&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+  &lt;span style=&#34;color: #75715e&#34;&gt;//Create a slice array with all the slugs (keys/IDs)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;documentIdArray&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;string&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{}&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;_&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;v&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;range&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;searchResult&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Hits&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;documentIdArray&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;append(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;documentIdArray&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;v&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;ID&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;collection&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Find&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;bson&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;M&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+			&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;slug&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bson&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;M&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+				&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;$in&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;documentIdArray&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt;
+			&lt;span style=&#34;color: #f8f8f2&#34;&gt;},&lt;/span&gt;
+		&lt;span style=&#34;color: #f8f8f2&#34;&gt;})&lt;/span&gt;
+
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;All&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Results&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Data&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;Results&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Page&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;pg&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Results&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Results&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;The most important line of note is&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;q&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;collection&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Find&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;
+  &lt;span style=&#34;color: #a6e22e&#34;&gt;bson&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;M&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;slug&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bson&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;M&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+      &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;$in&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;documentIdArray&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt;
+    &lt;span style=&#34;color: #f8f8f2&#34;&gt;},&lt;/span&gt;
+  &lt;span style=&#34;color: #f8f8f2&#34;&gt;})&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;We us the mongo &lt;code&gt;$in&lt;/code&gt; query to search for all documents with slugs that match the items in the ducmentIdArray.  This way, we dont have to search for the documents one by one.&lt;/p&gt;
+
+&lt;p&gt;Please let me know any improvements I can make to make this tutorial simpler. Also, feel free to let me know any mistakes I might have made, or alternative approaches to solving the challenges the code attempts to solve.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>A recap of 2014: Projects and Achievements</title>
@@ -133,15 +385,15 @@ broke most of the time.&lt;/p&gt;
       <pubDate>Thu, 05 Feb 2015 15:21:12 +0000</pubDate>
       
       <guid>http://tonyalaribe.github.io/post/aba2/</guid>
-      <description>&lt;p&gt;While travelling, my first indicator of being in Abia state was the road. Immediately the bus started struggling with gully sized pot holes, and totally eroded roads that were half immersed in water, I knew we had left the comfort of Akwa Ibom state, which is the state you have to go through, if going to Abia state from Cross River State.&lt;/p&gt;
+      <description>&lt;p&gt;While traveling, my first indicator of being in Abia state was the road. Immediately the bus started struggling with gully sized pot holes, and totally eroded roads that were half immersed in water, I knew we had left the comfort of Akwa Ibom state, which is the state you have to go through, if going to Abia state from Cross River State.&lt;/p&gt;
 
-&lt;p&gt;Everyone was trying to sell something to everyone. Four different guys tried selling the same book to me, almost in turns. Maybe they guessed from my glasses that I’m a reader. But that wasn’t the problem. The books they were trying to sell were obviusly printed in someone’s garage or room, with information hastily gathered from the internet. The book was titled “501 ways to inspire and motivate anyone”.&lt;/p&gt;
+&lt;p&gt;Everyone was trying to sell something to everyone. Four different guys tried selling the same book to me, almost in turns. Maybe they guessed from my glasses that I’m a reader. But that wasn’t the problem. The books they were trying to sell were obviously printed in someone’s garage or room, with information hastily gathered from the internet. The book was titled “501 ways to inspire and motivate anyone”.&lt;/p&gt;
 
 &lt;p&gt;People hawked everything, from eggs to electronics to belts and wallets. And they weren’t worried about how saturated the market for these items are. A wallet I would buy at N2000($13) in Calabar could be gotten here at N700($5), with them even begging you, in a bid to get you to buy their items. Imagine the price slashes? Probably due to excessive competition, and production of fakes.&lt;/p&gt;
 
 &lt;p&gt;So, everyone is hawking something, and everyone has a shop. Seriously, I didn’t see any building, housing or not, that didn’t have a stall or kiosk in front of it. All the stalls sold virtually the same things, mostly food items. Made me wonder who buys from who.&lt;/p&gt;
 
-&lt;p&gt;A day in Aba is enough to reveal the difference between entrepreneurship and business. There is little to no innovation here, just buying and selling, and maybe little creativity in terms of marketting stunts. I’m very sure there are some legendary businessmen here, who can sell anything to anyone, for a price, irrespective of whether the buyer wants the item or not.&lt;/p&gt;
+&lt;p&gt;A day in Aba is enough to reveal the difference between entrepreneurship and business. There is little to no innovation here, just buying and selling, and maybe little creativity in terms of marketing stunts. I’m very sure there are some legendary businessmen here, who can sell anything to anyone, for a price, irrespective of whether the buyer wants the item or not.&lt;/p&gt;
 
 &lt;p&gt;Teach a real Aba businessman entrepreneurship and innovation, and I’m very sure you’d be creating a force to be reckoned with.&lt;/p&gt;
 
@@ -155,15 +407,15 @@ broke most of the time.&lt;/p&gt;
 
 &lt;p&gt;Eventually, we got to the state capital, and it’s still horrible, at least everyother part that’s not close to the government house. The roads were relatively better than in Aba, but a little rowdy and unkept. Mind you, the bank was around the Government house, which is comonly called “Tower”, and I’d confess that the area is well taken care of, although the average street in Cross River State is still better off.&lt;/p&gt;
 
-&lt;p&gt;A few minutes away from the government house is where I spent the night, “Isieke”, In a Government Housing Estate. Funny that in a government housing estate in the state’s capital, access to running water is a luxery available to only those who can afford to drill their own bore holes. When I asked, I heard that in the state’s capital, running water is mostly available to those who live in the government house area “Tower area”.&lt;/p&gt;
+&lt;p&gt;A few minutes away from the government house is where I spent the night, “Isieke”, In a Government Housing Estate. Funny that in a government housing estate in the state’s capital, access to running water is a luxury available to only those who can afford to drill their own bore holes. When I asked, I heard that in the state’s capital, running water is mostly available to those who live in the government house area “Tower area”.&lt;/p&gt;
 
-&lt;p&gt;So much for a state capital, where all the facilities are centrallised around the Government House. I wonder about the possiblities of boasting about my state in a conversation with friends. I might just lie that I’m from Cross River State. At least I grew up here, and the Government knows the value of even allocation of resources.&lt;/p&gt;
+&lt;p&gt;So much for a state capital, where all the facilities are centralised around the Government House. I wonder about the possibilities of boasting about my state in a conversation with friends. I might just lie that I’m from Cross River State. At least I grew up here, and the Government knows the value of even allocation of resources.&lt;/p&gt;
 
 &lt;p&gt;Abia state is of course not entirely bad. The resourcefulness and determination to survive is a huge quality of everyone I’ve met so far, compared to other states I’ve been to in Nigeria. The people are hardworking, and love family, or at least they love showing off to family. Their girls are also something worth mentioning. They’re generally beautiful, but I wonder why most matured women I’ve met haven’t been so appealing. Maybe the stress, or the genes.&lt;/p&gt;
 
 &lt;p&gt;In summary, everyone in the state has a hustling culture. And you know the thing about hustling? “Mindset”. The mindset of being hustlers make them remain chained to hustling. So they hustle like crazy, and spend lots of what they make, showing off, in a bid to justify their hustling. The low incomed workers toil like crazy, making their products and services available at very low prices. The higher earning individuals like the politicians still hustle, never seeming to be satisfied by whatever wealth they accumulate, so they go on to coverting the state’s funds and spending it on less relevant things like publicising themselves, and building wonderful Government Houses and Palaces as homes.ile travelling, my first indicator of being in Abia state was the road. Immediately the bus started struggling with gully sized pot holes, and totally eroded roads that were half immersed in water, I knew we had left the comfort of Akwa Ibom state, which is the state you have to go through, if going to Abia state from Cross River State.&lt;/p&gt;
 
-&lt;p&gt;Everyone was trying to sell something to everyone. Four different guys tried selling the same book to me, almost in turns. Maybe they guessed from my glasses that I’m a reader. But that wasn’t the problem. The books they were trying to sell were obviusly printed in someone’s garage or room, with information hastily gathered from the internet. The book was titled “501 ways to inspire and motivate anyone”.&lt;/p&gt;
+&lt;p&gt;Everyone was trying to sell something to everyone. Four different guys tried selling the same book to me, almost in turns. Maybe they guessed from my glasses that I’m a reader. But that wasn’t the problem. The books they were trying to sell were obviously printed in someone’s garage or room, with information hastily gathered from the internet. The book was titled “501 ways to inspire and motivate anyone”.&lt;/p&gt;
 
 &lt;p&gt;People hawked everything, from eggs to electronics to belts and wallets. And they weren’t worried about how saturated the market for these items are. A wallet I would buy at N2000($13) in Calabar could be gotten here at N700($5), with them even begging you, in a bid to get you to buy their items. Imagine the price slashes? Probably due to excessive competition, and production of fakes.&lt;/p&gt;
 
@@ -183,7 +435,7 @@ broke most of the time.&lt;/p&gt;
 
 &lt;p&gt;A few minutes away from the government house is where I spent the night, “Isieke”, In a Government Housing Estate. Funny that in a government housing estate in the state’s capital, access to running water is a luxery available to only those who can afford to drill their own bore holes. When I asked, I heard that in the state’s capital, running water is mostly available to those who live in the government house area “Tower area”.&lt;/p&gt;
 
-&lt;p&gt;So much for a state capital, where all the facilities are centrallised around the Government House. I wonder about the possiblities of boasting about my state in a conversation with friends. I might just lie that I’m from Cross River State. At least I grew up here, and the Government knows the value of even allocation of resources.&lt;/p&gt;
+&lt;p&gt;So much for a state capital, where all the facilities are centrallised around the Government House. I wonder about the possibilities of boasting about my state in a conversation with friends. I might just lie that I’m from Cross River State. At least I grew up here, and the Government knows the value of even allocation of resources.&lt;/p&gt;
 
 &lt;p&gt;Abia state is of course not entirely bad. The resourcefulness and determination to survive is a huge quality of everyone I’ve met so far, compared to other states I’ve been to in Nigeria. The people are hardworking, and love family, or at least they love showing off to family. Their girls are also something worth mentioning. They’re generally beautiful, but I wonder why most matured women I’ve met haven’t been so appealing. Maybe the stress, or the genes.&lt;/p&gt;
 
