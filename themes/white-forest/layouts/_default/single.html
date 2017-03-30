@@ -1,146 +1,131 @@
 <!doctype html>
 <html lang="">
-  <head>
-    {{ $baseurl := .Site.BaseUrl }}
-    <base href="{{$baseurl}}">
+   <head>
+      {{ $baseurl := .Site.BaseURL }}
+      <base href="{{$baseurl}}">
       <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="description" content="{{.Summary}}">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{.Site.Title}} :: {{.Title}}</title>
-    <link rel="canonical" href="{{.Permalink}}">
-    <link rel="{{.RSSlink}}" rel="alternate" type="application/rss+xml"
-                                             title="{{.Site.Title}}">
-    <!-- Add to homescreen -->
-    <link rel="manifest" href="manifest.json">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <meta name="description" content="{{.Summary}}">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title> {{.Title}} :: {{.Site.Title}} </title>
+      <link rel="canonical" href="{{.Permalink}}">
+      <link rel="{{.RSSlink}}" rel="alternate" type="application/rss+xml" title="{{.Site.Title}}">
+      <!-- Add to homescreen -->
+      <link rel="manifest" href="manifest.json">
+      <!-- Fallback to homescreen for Chrome <39 on Android -->
+      <meta name="mobile-web-app-capable" content="yes">
+      <meta name="application-name" content="Web Starter Kit">
+      <link rel="icon" sizes="192x192" href="images/touch/chrome-touch-icon-192x192.png">
+      <!-- Add to homescreen for Safari on iOS -->
+      <meta name="apple-mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-status-bar-style" content="black">
+      <meta name="apple-mobile-web-app-title" content="Web Starter Kit">
+      <link rel="apple-touch-icon" href="images/touch/apple-touch-icon.png">
+      <!-- Tile icon for Win8 (144x144 + tile color) -->
+      <meta name="msapplication-TileImage" content="images/touch/ms-touch-icon-144x144-precomposed.png">
+      <meta name="msapplication-TileColor" content="#3372DF">
+      <meta name="theme-color" content="#3372DF">
+      <!-- SEO: If your mobile URL is different from the desktop URL, add a canonical link to the desktop page https://developers.google.com/webmasters/smartphone-sites/feature-phones -->
+      <!--
+         <link rel="canonical" href="http://www.example.com/">
+         -->
 
-    <!-- Fallback to homescreen for Chrome <39 on Android -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Web Starter Kit">
-    <link rel="icon" sizes="192x192" href="images/touch/chrome-touch-icon-192x192.png">
-
-    <!-- Add to homescreen for Safari on iOS -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="Web Starter Kit">
-    <link rel="apple-touch-icon" href="images/touch/apple-touch-icon.png">
-
-    <!-- Tile icon for Win8 (144x144 + tile color) -->
-    <meta name="msapplication-TileImage" content="images/touch/ms-touch-icon-144x144-precomposed.png">
-    <meta name="msapplication-TileColor" content="#3372DF">
-
-    <meta name="theme-color" content="#3372DF">
-
-    <!-- SEO: If your mobile URL is different from the desktop URL, add a canonical link to the desktop page https://developers.google.com/webmasters/smartphone-sites/feature-phones -->
-    <!--
-    <link rel="canonical" href="http://www.example.com/">
-    -->
-<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
-    <!-- Page styles -->
-    <link rel="stylesheet" href="/styles/main.css">
-  </head>
-  <body >
-
-
-    <main class="single-post">
-      <h2 class="xxlarge underlined single-heading "> <a href="{{$baseurl}}"
-              class="linkcolor"><i class="fa fa-home"   style=""></i></a>
-          {{ .Title }}
-      <div style="clear:both"></div></h2>
-      <div style="clear:both"></div>
-      <br/>
-      <article class="">
-        
-        
-        <div class=" g-wide--1 g-medium--half">
-            <br/>
-        <div class="sidebar ">
-          <time class="blog-date">
-              {{ .Date.Format "Mon Jan 2, 2006"}}
-          </time>
-          <hr/> 
-          
-          <div class="article-tags">
-            {{ range .Params.tags }} 
-            <a style="text-decoration:none" href="{{$baseurl}}/tags/{{ . | urlize }}" >{{.}}</a>
-          {{end}}
-          </div>
-          
-          <br/>
-          <div class="share"><span class="large">Share via:</span><br/>
-          
-              <a  href="https://www.facebook.com/dialog/share?
-                    app_id=806601066044153
-                      &display=popup
-                      &href={{.Permalink}}
-                      &redirect_uri={{.Permalink}}" class="facebook"><i class="fa fa-2x
-                      fa-facebook-square"></i></a>
-
-              <a
-                                     href="http://twitter.com/share?url={{.Permalink}}&text={{.Title}}" class="twitter"><i class="fa fa-2x fa-twitter"></i></a>
-
-              <a href="https://plus.google.com/share?url={{.Permalink}}&hl=en" class="gplus"><i class="fa fa-2x fa-google-plus"></i></a>
-
-
-
-          </div>
+      <!-- Page styles -->
+      <link rel="stylesheet" href="/styles/tachyons.min.css">
+      <link rel="stylesheet" href="/styles/main.css">
+   </head>
+   <body >
+      <main class="single-post">
+         <h2 class=" ma0 single-heading tc shadow-4 w-100">
+           <div class="dib fl">
+            <a href="{{$baseurl}}"
+               class="linkcolor  dib underlined link dark">home</a>
+               <span>&nbsp;&gt;</span>
+             </div>
+               <span>
+                 {{ .Title }}
+               </span>
+         </h2>
+         <article class="mt6 pt6">
+            <div class=" w-100 w-25-ns fl-ns">
+               <div class="sidebar pa3 ">
+                  <time class="blog-date">
+                  {{ .Date.Format "Mon Jan 2, 2006"}}
+                  </time>
+                  <hr/>
+                  <div class="">
+                     {{ range .Params.tags }}
+                     <a class="pv1 ph2 dib link ba b--light-silver pointer underline-hover f6 black ma1" href="{{$baseurl}}/tags/{{ . | urlize }}" >{{.}}</a>
+                     {{end}}
+                  </div>
+                  <br/>
+                  <div class="share"><span class="large">Share via:</span><br/>
+                     <a  href="https://www.facebook.com/dialog/share?
+                        app_id=806601066044153
+                        &display=popup
+                        &href={{.Permalink}}
+                        &redirect_uri={{.Permalink}}" class="facebook dib pa2"><svg xmlns="http://www.w3.org/2000/svg" class="h2" viewBox="0 0 408.8 408.8"><path d="M353.7 0H55.1C24.7 0 0 24.7 0 55.1v298.6c0 30.4 24.7 55.1 55.1 55.1h147.3l0.3-146.1h-38c-4.9 0-8.9-4-9-8.9l-0.2-47.1c0-5 4-9 9-9h37.9v-45.5c0-52.8 32.2-81.5 79.3-81.5h38.7c4.9 0 9 4 9 9v39.7c0 4.9-4 9-8.9 9l-23.7 0c-25.6 0-30.6 12.2-30.6 30v39.4h56.3c5.4 0 9.5 4.7 8.9 10l-5.6 47.1c-0.5 4.5-4.4 7.9-8.9 7.9h-50.5l-0.3 146.1h87.6c30.4 0 55.1-24.7 55.1-55.1V55.1C408.8 24.7 384.1 0 353.7 0z" fill="#475993"/></svg>
+                      </a>
+                     <a
+                        href="http://twitter.com/share?url={{.Permalink}}&text={{.Title}}" class="twitter dib pa2">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 455.7 455.7" class="h2"><rect width="455.7" height="455.7" fill="#50ABF1"/><path d="M60.4 337.8c30.3 19.2 66.3 30.4 104.9 30.4 108.3 0 196.2-87.8 196.2-196.2 0-2.7-0.1-5.4-0.2-8.1 3.9-3.1 28.2-22.5 34.1-35 0 0-19.7 8.2-38.9 10.1 0 0-0.1 0-0.1 0 0 0 0 0 0.1-0.1 1.8-1.2 26.6-18.1 30-38.2 0 0-13.9 7.4-33.4 13.9 -3.2 1.1-6.6 2.1-10.1 3.1 -12.6-13.4-30.4-21.8-50.2-21.8 -38 0-68.8 30.8-68.8 68.8 0 5.4 0.6 10.6 1.8 15.6 -5.3-0.2-86.2-4.8-141.3-71.4 0 0-32.9 44.9 19.6 91.1 0 0-16-0.6-29.7-8.9 0 0-5.1 54.4 54.4 68.3 0 0-11.7 4.4-30.4 1.3 0 0 10.4 44 63.3 48.1 0 0-41.8 37.7-101.1 28.9L60.4 337.8z" fill="#FFF"/></svg>
+                    </a>
+                  </div>
+               </div>
             </div>
-        </div>
-         
-        <div class="article-content g-wide--3 g-wide--last g-medium--half g-last">
-        
-            {{ .Content }} 
-            <br/>
-            {{ if .Params.series }}
-            {{ $name := index .Params.series 0 }}
-            <hr/>
-            <div><a href="" id="series"></a>This is a post in the <b>{{$name}}</b> series.<br/>
-                Other posts in this series:</div>
-
-            {{ $name := $name | urlize }}
-            {{ $series := index .Site.Taxonomies.series  $name }}
-            <ul class="series">
-               {{ range $series.Pages }}
-                  <li>{{.Date.Format "Jan 02, 2006"}} -  <a href="{{.Permalink}}">{{.LinkTitle}}</a></li>
-                {{end}}
-             </ul>
-            {{end}} 
-            <br/>
-          <div class="">
-            <section class="styleguide__article-nav">
-              <div class="container-medium">
-                <nav class="article-nav">
-
-                {{ if .Prev }}
-                <a href="{{.Prev.Permalink}}" class="article-nav-link article-nav-link--prev">
-                    <p class="article-nav-count">Prev</p>
-                    <p>{{.Prev.Title}}</p>
-                  </a>
-                {{end}}
-                {{ if .Next }}
-                <a href="{{.Next.Permalink}}" class="article-nav-link article-nav-link--next">
-                    <p class="article-nav-count">Next</p>
-                    <p>{{.Next.Title}}</p>
-                  </a>
-                {{end}}
-                </nav>
-              </div>
-            </section>
-          </div>
-          <br/>
-          {{template "_internal/disqus.html" . }}
-          
-        </div>
-        
-        
-        
-      </article>
-    </main>
-
-    <div style="clear:both;"></div>
-    <br/>
-   
-    {{ partial "footer.html"}}
-    <!-- Built with love using Web Starter Kit -->
-  </body>
+            <!--BW side bar and main content -->
+            <div class="w-100 w-75-ns fr-ns pa3">
+               <div class="measure-wide lh-copy f5 f4-ns">
+                  {{ .Content }}
+                  <br/>
+                  {{ if .Params.series }}
+                  {{ $name := index .Params.series 0 }}
+                  <hr/>
+                  <div><a href="" id="series"></a>This is a post in the <b>{{$name}}</b> series.<br/>
+                     Other posts in this series:
+                  </div>
+                  {{ $name := $name | urlize }}
+                  {{ $series := index .Site.Taxonomies.series  $name }}
+                  <ul class="series">
+                     {{ range $series.Pages }}
+                     <li>{{.Date.Format "Jan 02, 2006"}} -  <a href="{{.Permalink}}">{{.LinkTitle}}</a></li>
+                     {{end}}
+                  </ul>
+                  {{end}}
+               </div>
+               <br/>
+               <div class="">
+                  <section class="">
+                     <div class="">
+                        <nav class="cf">
+                           {{ if .Prev }}
+                           <div class="w-50 dib fl">
+                             <a href="{{.Prev.Permalink}}" class="dark underlined  link">
+                                <p class="">Prev</p>
+                                <p>{{.Prev.Title}}</p>
+                             </a>
+                           </div>
+                           {{end}}
+                           {{ if .Next }}
+                           <div class="w-50 dib  fr ">
+                             <a href="{{.Next.Permalink}}" class="diblink dark underlined link ">
+                                <p class="">Next</p>
+                                <p>{{.Next.Title}}</p>
+                             </a>
+                           </div>
+                           {{end}}
+                        </nav>
+                     </div>
+                  </section>
+               </div>
+               <br/>
+               {{template "_internal/disqus.html" . }}
+            </div>
+         </article>
+      </main>
+      <div style="clear:both;"></div>
+      <br/>
+      {{ partial "footer.html"}}
+      <!-- Built with love using Web Starter Kit -->
+   </body>
 </html>
