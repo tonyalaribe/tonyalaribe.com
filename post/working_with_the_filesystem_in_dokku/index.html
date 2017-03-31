@@ -5,10 +5,10 @@
       <base href="http://tonyalaribe.github.io">
       <meta charset="utf-8">
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="description" content="Achievements 2014 I learnt Golang, LESS, SASS, TOML, YAML and ANGULAR I built teaching experience, got my 1st pay check, quit a job I got real life marketting and sales experience ( Nescafe Entrepreneural Challenge ) I learnt about Printing ( Direct Imaging ), designing and printing branding materials and brochures, including an Annual report for Enactus, so I got to be a contractor for Enactus. I spoke to the Branch Controller of FCMB, on behalf of Enactus.">
+      <meta name="description" content="Dokku is a self hosted heroku-like platform as a service. And if you&rsquo;ve ever used heroku, you&rsquo;re aware of its ephemeral filesystem that deletes all your content with each deployment. This is a good system, as it forces you to separate your files from your application, and dokku provides an almost identical ephemeral system like heroku. But most applications need to store files somehow. To go around this, most of us simply upload our files to third party block storage platforms like amazon s3.">
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title> A recap of 2014: Projects and Achievements :: Anthony Alaribe </title>
-      <link rel="canonical" href="http://tonyalaribe.github.io/post/recap-2014-projects/">
+      <title> Working with the filesystem in dokku (Persistent File Storage) :: Anthony Alaribe </title>
+      <link rel="canonical" href="http://tonyalaribe.github.io/post/working_with_the_filesystem_in_dokku/">
       <link rel="" rel="alternate" type="application/rss+xml" title="Anthony Alaribe">
       
       <link rel="manifest" href="manifest.json">
@@ -41,17 +41,21 @@
                <span>&nbsp;&gt;</span>
              </div>
                <span>
-                 A recap of 2014: Projects and Achievements
+                 Working with the filesystem in dokku (Persistent File Storage)
                </span>
          </h2>
          <article class="mt6 pt6">
             <div class=" w-100 w-25-ns fl-ns">
                <div class="sidebar pa3 ">
                   <time class="blog-date">
-                  Fri Feb 6, 2015
+                  Thu Mar 30, 2017
                   </time>
                   <hr/>
                   <div class="">
+                     
+                     <a class="pv1 ph2 dib link ba b--light-silver pointer underline-hover f6 black ma1" href="http://tonyalaribe.github.io/tags/golang" >golang</a>
+                     
+                     <a class="pv1 ph2 dib link ba b--light-silver pointer underline-hover f6 black ma1" href="http://tonyalaribe.github.io/tags/dokku" >dokku</a>
                      
                   </div>
                   <br/>
@@ -59,11 +63,11 @@
                      <a  href="https://www.facebook.com/dialog/share?
                         app_id=806601066044153
                         &display=popup
-                        &href=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014-projects%2f
-                        &redirect_uri=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014-projects%2f" class="facebook dib pa2"><svg xmlns="http://www.w3.org/2000/svg" class="h2" viewBox="0 0 408.8 408.8"><path d="M353.7 0H55.1C24.7 0 0 24.7 0 55.1v298.6c0 30.4 24.7 55.1 55.1 55.1h147.3l0.3-146.1h-38c-4.9 0-8.9-4-9-8.9l-0.2-47.1c0-5 4-9 9-9h37.9v-45.5c0-52.8 32.2-81.5 79.3-81.5h38.7c4.9 0 9 4 9 9v39.7c0 4.9-4 9-8.9 9l-23.7 0c-25.6 0-30.6 12.2-30.6 30v39.4h56.3c5.4 0 9.5 4.7 8.9 10l-5.6 47.1c-0.5 4.5-4.4 7.9-8.9 7.9h-50.5l-0.3 146.1h87.6c30.4 0 55.1-24.7 55.1-55.1V55.1C408.8 24.7 384.1 0 353.7 0z" fill="#475993"/></svg>
+                        &href=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fworking_with_the_filesystem_in_dokku%2f
+                        &redirect_uri=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fworking_with_the_filesystem_in_dokku%2f" class="facebook dib pa2"><svg xmlns="http://www.w3.org/2000/svg" class="h2" viewBox="0 0 408.8 408.8"><path d="M353.7 0H55.1C24.7 0 0 24.7 0 55.1v298.6c0 30.4 24.7 55.1 55.1 55.1h147.3l0.3-146.1h-38c-4.9 0-8.9-4-9-8.9l-0.2-47.1c0-5 4-9 9-9h37.9v-45.5c0-52.8 32.2-81.5 79.3-81.5h38.7c4.9 0 9 4 9 9v39.7c0 4.9-4 9-8.9 9l-23.7 0c-25.6 0-30.6 12.2-30.6 30v39.4h56.3c5.4 0 9.5 4.7 8.9 10l-5.6 47.1c-0.5 4.5-4.4 7.9-8.9 7.9h-50.5l-0.3 146.1h87.6c30.4 0 55.1-24.7 55.1-55.1V55.1C408.8 24.7 384.1 0 353.7 0z" fill="#475993"/></svg>
                       </a>
                      <a
-                        href="http://twitter.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2frecap-2014-projects%2f&text=A%20recap%20of%202014%3a%20Projects%20and%20Achievements" class="twitter dib pa2">
+                        href="http://twitter.com/share?url=http%3a%2f%2ftonyalaribe.github.io%2fpost%2fworking_with_the_filesystem_in_dokku%2f&text=Working%20with%20the%20filesystem%20in%20dokku%20%28Persistent%20File%20Storage%29" class="twitter dib pa2">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 455.7 455.7" class="h2"><rect width="455.7" height="455.7" fill="#50ABF1"/><path d="M60.4 337.8c30.3 19.2 66.3 30.4 104.9 30.4 108.3 0 196.2-87.8 196.2-196.2 0-2.7-0.1-5.4-0.2-8.1 3.9-3.1 28.2-22.5 34.1-35 0 0-19.7 8.2-38.9 10.1 0 0-0.1 0-0.1 0 0 0 0 0 0.1-0.1 1.8-1.2 26.6-18.1 30-38.2 0 0-13.9 7.4-33.4 13.9 -3.2 1.1-6.6 2.1-10.1 3.1 -12.6-13.4-30.4-21.8-50.2-21.8 -38 0-68.8 30.8-68.8 68.8 0 5.4 0.6 10.6 1.8 15.6 -5.3-0.2-86.2-4.8-141.3-71.4 0 0-32.9 44.9 19.6 91.1 0 0-16-0.6-29.7-8.9 0 0-5.1 54.4 54.4 68.3 0 0-11.7 4.4-30.4 1.3 0 0 10.4 44 63.3 48.1 0 0-41.8 37.7-101.1 28.9L60.4 337.8z" fill="#FFF"/></svg>
                     </a>
                   </div>
@@ -74,66 +78,51 @@
                <div class="measure-wide lh-copy f5 f4-ns">
                   
 
-<h3 id="achievements-2014">Achievements 2014</h3>
+<p>Dokku is a self hosted heroku-like platform as a service. And if you&rsquo;ve ever used heroku, you&rsquo;re aware of its ephemeral filesystem that deletes all your content with each deployment.  This is a good system, as it forces you to separate your files from your application, and dokku provides an almost identical ephemeral system like heroku.</p>
+
+<p>But most applications need to store files somehow. To go around this, most of us simply upload our files to third party block storage platforms like amazon s3. But how about when we really need to use a file system?</p>
+
+<p>Dokku provides a way to attach a persistent directory to your application, using the Dokku storage plugin. Dokku creates a new directory /var/lib/dokku/data/storage during installation, so its generally accepted that this directory be the base for the mounted storage.</p>
+
+<p>The mounting process is a rather simple process, but first, lets explore.</p>
+
+<p>ssh into you dokku instance, and check out the default dokku data storage directory.</p>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>  <span style="color: #f8f8f2">cd</span> /var/lib/dokku/data/storage
+  ls
+</pre></div>
+
+<p>If this is your first time with dokku persistent storage, the directory should be empty.</p>
+
+<p>Next we create a directory to hold the files for our application</p>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>  mkdir app-name
+</pre></div>
+
+<p>Apps are usually run as the dokku user, so we make sure the dokku user and the 32767 group id has access to the directory.</p>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>chown -R dokku:dokku /var/lib/dokku/data/storage/app-name
+chown -R <span style="color: #ae81ff">32767</span>:32767 /var/lib/dokku/data/storage/app-name
+</pre></div>
+
+<p>Then we mount the directory to the /storage directory. You could replace /storage with any directory path, but it should be relative. eg /app/files.</p>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>  dokku storage:mount app-name /var/lib/dokku/data/storage/app-name:/storage
+</pre></div>
+
+<p>What this simply means is that when you write to /storage, you&rsquo;re actually writing to /var/lib/dokku/data/storage/app-name. The best part is that the content of the  /var/lib/dokku/data/storage/app-name directory is persisted between application deployments, since it is outside of the dokku container.</p>
+
+<p>Please be aware that when you destroy your app, the persisted folders will stay on the remote system and you will need to delete them manually if you want them gone.</p>
+
+<h1 id="use-cases">Use cases</h1>
 
 <ul>
-<li>I learnt Golang, LESS, SASS, TOML, YAML and ANGULAR</li>
-<li>I built teaching experience, got my 1st pay check, quit a job</li>
-<li>I got real life marketting and sales experience ( Nescafe Entrepreneural
-Challenge )</li>
-<li>I learnt about Printing ( Direct Imaging ), designing and printing branding
-materials and brochures, including an Annual report for Enactus, so I got  to
-be a contractor for Enactus.</li>
-<li>I spoke to the Branch Controller of FCMB, on behalf of Enactus.</li>
-<li>I learned to take responsibilities and manage people, with Enactus as a
-platform.</li>
-<li>Learned about JSON resume standard, and designed a graphically enticing
-Resume.</li>
-<li>I became badass with linux shell</li>
-<li>I installed Arch Linux on my laptop (The hard way, with lots of challenges).</li>
-<li>I got my first laptop in 2014</li>
-<li>I got involved in IDEA and smile (A programming partner).</li>
-<li>My insights on Entrepreneurship changed- I got lots of entrepreneural ideas
-too.</li>
-<li>I designed a website for a lecturer, for a sizable sum.</li>
-<li>I began active blogging on this  blog, officially.</li>
-<li>I learned to use the Hugo static blog engine.</li>
-<li>I travelled to, and toured Abia State (Umuahia and Aba), on my own.</li>
-<li>I learned to write markdown, which is what this blog is written in.</li>
+<li><p>I use <a href="https://github.com/boltdb/bolt">bolt db</a> and <a href="https://www.sqlite.org">sqlite</a> for some of my web apps, where I dont really want the complexity of a full blown database. So dokku persistent storage helps make these filesystem dependent databases possible.</p></li>
+
+<li><p>I use <a href="http://www.blevesearch.com/">bleve search</a> to index my data. Most applications I work on, usually need some form of search capabilities, and while most databases like postgresql or mongo db have really good search capabilities, they still remain lacking, with limited tuning capabilities. And bleve on its own, utilizes a key value store which would usually need access to the filesystem for persistence.</p></li>
+
+<li><p>Sometimes I dont want to store uploaded files on heroku. Especially for very quick and  applications.</p></li>
+
+<li><p>Its possible for most applications to be built with a combination of a key value store like bolt, and a full text search engine like bleve.</p></li>
 </ul>
 
-<h3 id="goals-i-had-for-2014">Goals I had for 2014</h3>
-
-<ul>
-<li>Meditate and do yoga often.</li>
-<li>Excercise dialy.</li>
-<li>Learn Electronics.</li>
-<li>Learn Artificial Intelligence.</li>
-<li>Learn Golang.</li>
-<li>Learn Hausa.</li>
-<li>Learn Mandarin.</li>
-<li>Build Loki ( An Artificially Intelligent Personal Assistant)</li>
-<li>Start a business</li>
-<li>- Book rental service</li>
-<li>- Wadeva (online interest based social network)</li>
-</ul>
-
-<h3 id="books-that-stood-out-in-2014">Books that stood out in 2014</h3>
-
-<ul>
-<li>Rich Dad Poor Dad - Robert Kiyosaki</li>
-<li>Enchantment - Guy Kiwasaki</li>
-<li>To kill a Moking  Bird - Harper Lee</li>
-<li>Frost series - Kailin Gow</li>
-<li>The Perks of being a wallflower - Steven Chbosky</li>
-<li>Chronicles of Ancient Darkness series - Michelle Paver</li>
-</ul>
-
-<h3 id="project-ideas-and-projects-i-started-in-2014">Project Ideas and Projects I started in 2014</h3>
-
-<ul>
-<li>Computer Vision  measurement app</li>
-</ul>
+<p>For more information on the dokku persistent file storage, visit <a href="http://dokku.viewdocs.io/dokku/advanced-usage/persistent-storage/">http://dokku.viewdocs.io/dokku/advanced-usage/persistent-storage/</a></p>
 
                   <br/>
                   
@@ -145,17 +134,17 @@ too.</li>
                         <nav class="cf">
                            
                            <div class="w-50 dib fl">
-                             <a href="http://tonyalaribe.github.io/post/working_with_the_filesystem_in_dokku/" class="dark underlined  link">
+                             <a href="http://tonyalaribe.github.io/post/index_a_mongo_db_site_with_bleve_in_golang/" class="dark underlined  link">
                                 <p class="">Prev</p>
-                                <p>Working with the filesystem in dokku (Persistent File Storage)</p>
+                                <p>How to use bleve search with a mongo db database in golang</p>
                              </a>
                            </div>
                            
                            
                            <div class="w-50 dib  fr ">
-                             <a href="http://tonyalaribe.github.io/post/recap-2014/" class="diblink dark underlined link ">
+                             <a href="http://tonyalaribe.github.io/post/recap-2014-projects/" class="diblink dark underlined link ">
                                 <p class="">Next</p>
-                                <p>A recap of 2014: An Essay</p>
+                                <p>A recap of 2014: Projects and Achievements</p>
                              </a>
                            </div>
                            
@@ -167,9 +156,9 @@ too.</li>
                <div id="disqus_thread"></div>
 <script type="text/javascript">
     var disqus_shortname = 'anthonyalaribe';
-    var disqus_identifier = 'http:\/\/tonyalaribe.github.io\/post\/recap-2014-projects\/';
-    var disqus_title = 'A recap of 2014: Projects and Achievements';
-    var disqus_url = 'http:\/\/tonyalaribe.github.io\/post\/recap-2014-projects\/';
+    var disqus_identifier = 'http:\/\/tonyalaribe.github.io\/post\/working_with_the_filesystem_in_dokku\/';
+    var disqus_title = 'Working with the filesystem in dokku (Persistent File Storage)';
+    var disqus_url = 'http:\/\/tonyalaribe.github.io\/post\/working_with_the_filesystem_in_dokku\/';
 
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

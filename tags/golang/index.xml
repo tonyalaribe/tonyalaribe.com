@@ -263,6 +263,62 @@ if err != nil {
     </item>
     
     <item>
+      <title>Working with the filesystem in dokku (Persistent File Storage)</title>
+      <link>http://tonyalaribe.github.io/post/working_with_the_filesystem_in_dokku/</link>
+      <pubDate>Thu, 30 Mar 2017 18:16:34 +0100</pubDate>
+      
+      <guid>http://tonyalaribe.github.io/post/working_with_the_filesystem_in_dokku/</guid>
+      <description>
+
+&lt;p&gt;Dokku is a self hosted heroku-like platform as a service. And if you&amp;rsquo;ve ever used heroku, you&amp;rsquo;re aware of its ephemeral filesystem that deletes all your content with each deployment.  This is a good system, as it forces you to separate your files from your application, and dokku provides an almost identical ephemeral system like heroku.&lt;/p&gt;
+
+&lt;p&gt;But most applications need to store files somehow. To go around this, most of us simply upload our files to third party block storage platforms like amazon s3. But how about when we really need to use a file system?&lt;/p&gt;
+
+&lt;p&gt;Dokku provides a way to attach a persistent directory to your application, using the Dokku storage plugin. Dokku creates a new directory /var/lib/dokku/data/storage during installation, so its generally accepted that this directory be the base for the mounted storage.&lt;/p&gt;
+
+&lt;p&gt;The mounting process is a rather simple process, but first, lets explore.&lt;/p&gt;
+
+&lt;p&gt;ssh into you dokku instance, and check out the default dokku data storage directory.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;  &lt;span style=&#34;color: #f8f8f2&#34;&gt;cd&lt;/span&gt; /var/lib/dokku/data/storage
+  ls
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;If this is your first time with dokku persistent storage, the directory should be empty.&lt;/p&gt;
+
+&lt;p&gt;Next we create a directory to hold the files for our application&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;  mkdir app-name
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Apps are usually run as the dokku user, so we make sure the dokku user and the 32767 group id has access to the directory.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;chown -R dokku:dokku /var/lib/dokku/data/storage/app-name
+chown -R &lt;span style=&#34;color: #ae81ff&#34;&gt;32767&lt;/span&gt;:32767 /var/lib/dokku/data/storage/app-name
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;Then we mount the directory to the /storage directory. You could replace /storage with any directory path, but it should be relative. eg /app/files.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span&gt;&lt;/span&gt;  dokku storage:mount app-name /var/lib/dokku/data/storage/app-name:/storage
+&lt;/pre&gt;&lt;/div&gt;
+
+&lt;p&gt;What this simply means is that when you write to /storage, you&amp;rsquo;re actually writing to /var/lib/dokku/data/storage/app-name. The best part is that the content of the  /var/lib/dokku/data/storage/app-name directory is persisted between application deployments, since it is outside of the dokku container.&lt;/p&gt;
+
+&lt;p&gt;Please be aware that when you destroy your app, the persisted folders will stay on the remote system and you will need to delete them manually if you want them gone.&lt;/p&gt;
+
+&lt;h1 id=&#34;use-cases&#34;&gt;Use cases&lt;/h1&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;I use &lt;a href=&#34;https://github.com/boltdb/bolt&#34;&gt;bolt db&lt;/a&gt; and &lt;a href=&#34;https://www.sqlite.org&#34;&gt;sqlite&lt;/a&gt; for some of my web apps, where I dont really want the complexity of a full blown database. So dokku persistent storage helps make these filesystem dependent databases possible.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;I use &lt;a href=&#34;http://www.blevesearch.com/&#34;&gt;bleve search&lt;/a&gt; to index my data. Most applications I work on, usually need some form of search capabilities, and while most databases like postgresql or mongo db have really good search capabilities, they still remain lacking, with limited tuning capabilities. And bleve on its own, utilizes a key value store which would usually need access to the filesystem for persistence.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Sometimes I dont want to store uploaded files on heroku. Especially for very quick and  applications.&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;Its possible for most applications to be built with a combination of a key value store like bolt, and a full text search engine like bleve.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For more information on the dokku persistent file storage, visit &lt;a href=&#34;http://dokku.viewdocs.io/dokku/advanced-usage/persistent-storage/&#34;&gt;http://dokku.viewdocs.io/dokku/advanced-usage/persistent-storage/&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Diving into golang: 1: An opinionated introduction</title>
       <link>http://tonyalaribe.github.io/post/golang1/</link>
       <pubDate>Wed, 04 Feb 2015 23:03:54 +0000</pubDate>
